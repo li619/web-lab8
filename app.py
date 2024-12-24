@@ -1,14 +1,11 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, login_required, current_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 import os
 from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Score
-from config import Config
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key'  # 可以改成任何随机字符串
+app.config['SECRET_KEY'] = 'your-secret-key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///game.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -17,14 +14,29 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# 定义用户模型
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+    scores = db.relationship('Score', backref='user', lazy=True)
+
+# 定义分数模型
+class Score(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    score = db.Column(db.Integer, nullable=False)
+    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 @app.route('/')
-@login_required
-def game():
-    return render_template('game.html')
+def index():
+    if current_user.is_authenticated:
+        return render_template('game.html')
+    return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -89,7 +101,13 @@ def get_scores():
         'date': score.date.strftime('%Y-%m-%d %H:%M:%S')
     } for score in scores])
 
-if __name__ == '__main__':
+# 初始化数据库
+def init_db():
     with app.app_context():
         db.create_all()
+
+# 确保数据库存在
+init_db()
+
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000))) 
