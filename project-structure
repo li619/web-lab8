@@ -1,12 +1,7 @@
-breakout-game/
-  ├── index.html
-  ├── css/
-  │   └── style.css
-  ├── js/
-  │   ├── game.js
-  │   └── scenes/
-  │       ├── GameScene.js
-  │       ├── MenuScene.js
-  │       └── GameOverScene.js
-  └── static/
-      └── penzhuang.mp3
+web-lab8/
+├── static/          (原有的静态文件)
+├── templates/       (新建文件夹，用于存放HTML模板)
+├── database.db      (将被创建的SQLite数据库文件)
+├── app.py          (新建的Flask应用主文件)
+├── models.py       (新建的数据库模型文件)
+└── config.py       (新建的配置文件)

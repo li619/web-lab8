@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>打砖块游戏</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- 使用 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <style>
+        .user-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .score-board {
+            position: fixed;
+            top: 70px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="user-info">
+        欢迎, {{ current_user.username }}!
+        <a href="{{ url_for('logout') }}" class="logout-btn">退出</a>
+    </div>
+
+    <div class="score-board">
+        <h3>历史最高分</h3>
+        <div class="score-list" id="scoreList"></div>
+    </div>
+
+    <div id="game"></div>
+
+    <!-- 游戏场景类 -->
+    <script>
+        // MenuScene
+        class MenuScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'MenuScene' });
+            }
+
+            create() {
+                this.add.text(400, 200, '打砖块游戏', {
+                    fontSize: '48px',
+                    fill: '#2196f3',
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold'
+                }).setOrigin(0.5);
+
+                const startButton = this.add.text(400, 300, '开始游戏', {
+                    fontSize: '32px',
+                    fill: '#fff',
+                    backgroundColor: '#2196f3',
+                    padding: { x: 20, y: 10 }
+                })
+                .setOrigin(0.5)
+                .setInteractive();
+
+                startButton.on('pointerover', () => {
+                    startButton.setStyle({ backgroundColor: '#1976d2' });
+                });
+
+                startButton.on('pointerout', () => {
+                    startButton.setStyle({ backgroundColor: '#2196f3' });
+                });
+
+                startButton.on('pointerdown', () => {
+                    this.scene.start('GameScene');
+                });
+            }
+        }
+
+        // GameScene
+        class GameScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'GameScene' });
+                this.score = 0;
+                this.lives = 3;
+                this.level = 1;
+                this.combo = 0;
+                this.powerUps = [];
+                this.soundEnabled = false;
+                this.retryCount = 0;
+            }
+
+            preload() {
+                // 创建临时图形
+                const graphics = this.add.graphics();
+                
+                // 创建背景
+                graphics.fillStyle(0xe0f7fa);
+                graphics.fillRect(0, 0, 800, 600);
+                graphics.generateTexture('background', 800, 600);
+                
+                // 创建闪亮的球
+                graphics.clear();
+                graphics.lineStyle(2, 0xffffff);
+                graphics.fillStyle(0x00bcd4);
+                graphics.beginPath();
+                graphics.arc(10, 10, 8, 0, Math.PI * 2);
+                graphics.closePath();
+                graphics.strokePath();
+                graphics.fill();
+                graphics.generateTexture('ball', 20, 20);
+                
+                // 创建炫酷的球拍
+                graphics.clear();
+                graphics.fillStyle(0x2196f3);
+                graphics.fillRoundedRect(0, 0, 100, 20, 10);
+                graphics.generateTexture('paddle', 100, 20);
+                
+                // 创建彩色砖块
+                const colors = [0xff4081, 0x7c4dff, 0x00bcd4, 0x64dd17, 0xffd600];
+                for (let i = 0; i < colors.length; i++) {
+                    graphics.clear();
+                    graphics.fillStyle(colors[i]);
+                    graphics.fillRoundedRect(0, 0, 80, 30, 5);
+                    graphics.lineStyle(2, 0xffffff);
+                    graphics.strokeRoundedRect(0, 0, 80, 30, 5);
+                    graphics.generateTexture(`brick${i}`, 80, 30);
+                }
+
+                graphics.destroy();
+            }
+
+            create() {
+                // 添加背景
+                this.add.image(400, 300, 'background');
+
+                // 创建UI
+                this.createUI();
+                
+                // 设置物理系统
+                this.physics.world.setBoundsCollision(true, true, true, false);
+
+                // 修改球拍的物理属性
+                this.paddle = this.add.sprite(400, 580, 'paddle');
+                this.physics.add.existing(this.paddle, false);
+                this.paddle.body.immovable = true;
+                this.paddle.setOrigin(0.5, 1);
+                
+                // 修改球拍的碰撞区域
+                this.paddle.body.setSize(this.paddle.displayWidth, 20);
+                this.paddle.body.checkCollision.up = true;
+                this.paddle.body.checkCollision.down = true;
+                this.paddle.body.checkCollision.left = true;
+                this.paddle.body.checkCollision.right = true;
+
+                // 修改球的物理属性
+                this.ball = this.add.sprite(400, 560, 'ball');
+                this.physics.add.existing(this.ball);
+                this.ball.setOrigin(0.5);
+                this.ball.body.setCircle(8);
+                this.ball.body.setBounce(1);
+                this.ball.body.setCollideWorldBounds(true);
+                this.ball.body.setMaxVelocity(400, 400);
+                this.ball.body.setDrag(0);
+                this.ball.body.setFriction(0);
+
+                // 创建砖块组
+                this.bricks = this.physics.add.staticGroup();
+                this.createBricks();
+
+                // 设置碰撞检测
+                this.physics.add.collider(
+                    this.ball,
+                    this.paddle,
+                    this.hitPaddle,
+                    null,
+                    this
+                );
+
+                this.physics.add.collider(
+                    this.ball,
+                    this.bricks,
+                    this.hitBrick,
+                    null,
+                    this
+                );
+
+                // 设置输入控制
+                this.setupInput();
+
+                // 初始化状态
+                this.ballLaunched = false;
+            }
+
+            createUI() {
+                // 分数显示
+                this.scoreText = this.add.text(16, 16, '分数: 0', {
+                    fontSize: '32px',
+                    fill: '#2196f3',
+                    fontFamily: 'Arial',
+                    fontStyle: 'bold'
+                });
+
+                // 生命值显示
+                this.livesText = this.add.text(650, 16, '❤️'.repeat(this.lives), {
+                    fontSize: '32px'
+                });
+
+                // 关卡显示
+                this.levelText = this.add.text(400, 16, `关卡 ${this.level}`, {
+                    fontSize: '32px',
+                    fill: '#2196f3',
+                    fontFamily: 'Arial'
+                }).setOrigin(0.5, 0);
+            }
+
+            createBricks() {
+                const brickColors = 5;
+                const rows = 5;
+                const cols = 8;
+                const brickWidth = 80;
+                const brickHeight = 30;
+                const padding = 10;
+                const offsetX = 80;
+                const offsetY = 60;
+
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        const brickX = offsetX + j * (brickWidth + padding);
+                        const brickY = offsetY + i * (brickHeight + padding);
+                        const colorIndex = i % brickColors;
+                        
+                        const brick = this.bricks.create(brickX, brickY, `brick${colorIndex}`);
+                        brick.setScale(0.8);
+                        brick.setData('color', colorIndex);
+                    }
+                }
+            }
+
+            setupInput() {
+                // 鼠标控制
+                this.input.on('pointermove', (pointer) => {
+                    const x = Phaser.Math.Clamp(pointer.x, 52, 748);
+                    this.paddle.x = x;
+                    if (!this.ballLaunched) {
+                        this.ball.x = x;
+                    }
+                });
+
+                // 发射球
+                this.input.on('pointerdown', () => {
+                    if (!this.ballLaunched) {
+                        this.launchBall();
+                    }
+                });
+
+                // 添加开始提示文本
+                this.startText = this.add.text(400, 450, '点击发射小球', {
+                    fontSize: '24px',
+                    fill: '#2196f3',
+                    fontFamily: 'Arial'
+                }).setOrigin(0.5);
+            }
+
+            launchBall() {
+                if (!this.ballLaunched) {
+                    this.ballLaunched = true;
+                    this.ball.body.setVelocity(0, -300);
+                    if (this.startText) {
+                        this.startText.destroy();
+                    }
+                }
+            }
+
+            hitPaddle(ball, paddle) {
+                const diff = ball.x - paddle.x;
+                const normalizedDiff = Phaser.Math.Clamp(diff / (paddle.displayWidth / 2), -1, 1);
+                const baseSpeed = 300;
+                const maxAngle = 60;
+                const angle = normalizedDiff * maxAngle;
+                const rad = Phaser.Math.DegToRad(angle);
+                
+                const newVelX = baseSpeed * Math.sin(rad);
+                const newVelY = -Math.abs(baseSpeed * Math.cos(rad));
+                
+                ball.body.setVelocity(newVelX, newVelY);
+            }
+
+            hitBrick(ball, brick) {
+                this.score += 10;
+                this.scoreText.setText('分数: ' + this.score);
+
+                brick.destroy();
+                
+                if (this.bricks.countActive() === 0) {
+                    this.levelComplete();
+                }
+            }
+
+            levelComplete() {
+                this.level++;
+                this.levelText.setText(`关卡 ${this.level}`);
+                this.resetBall();
+                this.createBricks();
+            }
+
+            update() {
+                // 球拍跟随鼠标移动
+                if (this.input.activePointer.x) {
+                    this.paddle.x = Phaser.Math.Clamp(
+                        this.input.activePointer.x,
+                        52,
+                        748
+                    );
+                }
+
+                // 未发射时球跟随球拍
+                if (!this.ballLaunched) {
+                    this.ball.x = this.paddle.x;
+                    this.ball.y = this.paddle.y - 20;
+                }
+
+                // 检查球是否掉落
+                if (this.ball.y > this.paddle.y + 20) {
+                    this.lives--;
+                    if (this.lives > 0) {
+                        this.livesText.setText('❤️'.repeat(this.lives));
+                        this.resetBall();
+                        
+                        const lostText = this.add.text(400, 300, '失去一条生命，点击继续', {
+                            fontSize: '24px',
+                            fill: '#2196f3'
+                        }).setOrigin(0.5);
+
+                        this.input.once('pointerdown', () => {
+                            lostText.destroy();
+                            this.launchBall();
+                        });
+                    } else {
+                        // 保存分数
+                        window.saveGameScore(this.score);
+                        
+                        if (this.retryCount < 1) {
+                            this.retryCount++;
+                            this.scene.start('GameOverScene', { 
+                                score: this.score,
+                                canRetry: true 
+                            });
+                        } else {
+                            this.scene.start('GameOverScene', { 
+                                score: this.score,
+                                canRetry: false 
+                            });
+                        }
+                    }
+                }
+            }
+
+            resetBall() {
+                this.ballLaunched = false;
+                this.ball.body.setVelocity(0, 0);
+                this.ball.x = this.paddle.x;
+                this.ball.y = this.paddle.y - 20;
+            }
+        }
+
+        // GameOverScene
+        class GameOverScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'GameOverScene' });
+            }
+
+            init(data) {
+                this.score = data.score;
+                this.canRetry = data.canRetry;
+            }
+
+            create() {
+                this.add.text(400, 200, '游戏结束', {
+                    fontSize: '48px',
+                    fill: '#2196f3',
+                    fontFamily: 'Arial'
+                }).setOrigin(0.5);
+
+                this.add.text(400, 300, `最终分数: ${this.score}`, {
+                    fontSize: '32px',
+                    fill: '#333'
+                }).setOrigin(0.5);
+
+                if (this.canRetry) {
+                    const restartButton = this.add.text(400, 400, '再试一次', {
+                        fontSize: '32px',
+                        fill: '#fff',
+                        backgroundColor: '#2196f3',
+                        padding: { x: 20, y: 10 }
+                    })
+                    .setOrigin(0.5)
+                    .setInteractive();
+
+                    restartButton.on('pointerdown', () => {
+                        this.scene.start('GameScene');
+                    });
+                }
+
+                const menuButton = this.add.text(400, this.canRetry ? 460 : 400, '返回主菜单', {
+                    fontSize: '32px',
+                    fill: '#fff',
+                    backgroundColor: '#ff4081',
+                    padding: { x: 20, y: 10 }
+                })
+                .setOrigin(0.5)
+                .setInteractive();
+
+                menuButton.on('pointerdown', () => {
+                    this.scene.start('MenuScene');
+                });
+            }
+        }
+
+        // 游戏配置
+        const config = {
+            type: Phaser.AUTO,
+            parent: 'game',
+            width: 800,
+            height: 600,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: [MenuScene, GameScene, GameOverScene],
+            backgroundColor: '#ffffff'
+        };
+
+        // 初始化游戏
+        window.addEventListener('load', () => {
+            const game = new Phaser.Game(config);
+        });
+    </script>
+
+    <!-- 分数相关功能 -->
+    <script>
+        window.saveGameScore = function(score) {
+            fetch('/save_score', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ score: score })
+            });
+        };
+
+        function loadScores() {
+            fetch('/get_scores')
+                .then(response => response.json())
+                .then(scores => {
+                    const scoreList = document.getElementById('scoreList');
+                    scoreList.innerHTML = scores.map(score => 
+                        `<div class="score-item">
+                            <div>分数: ${score.score}</div>
+                            <div>时间: ${score.date}</div>
+                         </div>`
+                    ).join('');
+                });
+        }
+
+        setInterval(loadScores, 5000);
+        loadScores();
+    </script>
+</body>
+</html> 

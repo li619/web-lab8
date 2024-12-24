@@ -1,0 +1,30 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+}
+
+#game {
+    box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
+.logout-btn {
+    background: #ff4081;
+    color: white;
+    border: none;
+    padding: 5px 15px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.score-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+} 

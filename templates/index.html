@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>打砖块游戏</title>
+    <style>
+        /* 原有的样式保持不变 */
+        .score-board {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .score-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <div class="user-info">
+        Welcome, {{ current_user.username }}! 
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+    {% else %}
+    <div class="user-info">
+        <a href="{{ url_for('login') }}">Login</a> or 
+        <a href="{{ url_for('register') }}">Register</a>
+    </div>
+    {% endif %}
+
+    <!-- 原有的游戏画布 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 分数展示板 -->
+    <div class="score-board">
+        <h3>历史最高分</h3>
+        <div class="score-list" id="scoreList"></div>
+    </div>
+
+    <!-- 原有的游戏脚��� -->
+    <script src="{{ url_for('static', filename='your-game-script.js') }}"></script>
+    
+    <script>
+        // 添加保存分数的函数
+        function saveScore(score) {
+            fetch('/save_score', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ score: score })
+            });
+        }
+
+        // 获取并显示分数历史
+        function loadScores() {
+            fetch('/get_scores')
+                .then(response => response.json())
+                .then(scores => {
+                    const scoreList = document.getElementById('scoreList');
+                    scoreList.innerHTML = scores.map(score => 
+                        `<div>分数: ${score.score} - ${score.date}</div>`
+                    ).join('');
+                });
+        }
+
+        // 定期更新分数显示
+        setInterval(loadScores, 5000);
+        loadScores();
+    </script>
+</body>
+</html> 
