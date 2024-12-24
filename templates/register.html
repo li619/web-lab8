@@ -1,49 +1,230 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Register</title>
+    <meta charset="utf-8">
+    <title>注册 - 打砖块游戏</title>
     <style>
+        /* 使用与登录页面相同的样式，但改变主题色 */
         body {
-            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
+            min-height: 100vh;
+            background: linear-gradient(45deg, #7b1fa2, #9c27b0);
+            font-family: Arial, sans-serif;
         }
-        .register-form {
-            background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        input {
-            display: block;
-            margin: 10px 0;
-            padding: 5px;
-            width: 200px;
-        }
-        button {
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             width: 100%;
-            padding: 10px;
-            background: #007bff;
+            max-width: 400px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #7b1fa2;
+            margin: 0;
+            font-size: 2em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            border-color: #7b1fa2;
+            outline: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: #7b1fa2;
             color: white;
             border: none;
-            border-radius: 3px;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background: #6a1b9a;
+        }
+
+        .links {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .links a {
+            color: #7b1fa2;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .links a:hover {
+            color: #6a1b9a;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: #7b1fa2;
+            transition: width 0.3s ease, left 0.3s ease;
+        }
+
+        .form-group:focus-within::after {
+            width: 100%;
+            left: 0;
+        }
+
+        /* 添加密码强度指示器 */
+        .password-strength {
+            height: 5px;
+            margin-top: 5px;
+            border-radius: 2.5px;
+            transition: all 0.3s ease;
+        }
+
+        .strength-weak {
+            background: #ff5252;
+            width: 33.33%;
+        }
+
+        .strength-medium {
+            background: #ffd740;
+            width: 66.66%;
+        }
+
+        .strength-strong {
+            background: #69f0ae;
+            width: 100%;
         }
     </style>
 </head>
 <body>
-    <div class="register-form">
-        <h2>Register</h2>
+    <div class="container">
+        <div class="header">
+            <h1>创建账号</h1>
+        </div>
+
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+
         <form method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Register</button>
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+                <div class="password-strength"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">确认密码</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
+            </div>
+
+            <button type="submit" class="submit-btn">注册</button>
         </form>
-        <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+
+        <div class="links">
+            <a href="{{ url_for('login') }}">已有账号？立即登录</a>
+        </div>
     </div>
+
+    <script>
+        // 添加密码强度检测
+        const passwordInput = document.getElementById('password');
+        const strengthIndicator = document.querySelector('.password-strength');
+        const confirmPassword = document.getElementById('confirm_password');
+        const submitButton = document.querySelector('.submit-btn');
+
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            let strength = 0;
+            
+            if (password.length >= 8) strength++;
+            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
+            if (password.match(/\d/)) strength++;
+            
+            strengthIndicator.className = 'password-strength';
+            if (strength === 1) strengthIndicator.classList.add('strength-weak');
+            else if (strength === 2) strengthIndicator.classList.add('strength-medium');
+            else if (strength === 3) strengthIndicator.classList.add('strength-strong');
+            else strengthIndicator.style.width = '0';
+        });
+
+        // 添加密码确认检查
+        confirmPassword.addEventListener('input', function() {
+            if (this.value === passwordInput.value) {
+                this.style.borderColor = '#69f0ae';
+                submitButton.disabled = false;
+            } else {
+                this.style.borderColor = '#ff5252';
+                submitButton.disabled = true;
+            }
+        });
+    </script>
 </body>
 </html> 

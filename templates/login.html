@@ -1,85 +1,167 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Login - 打砖块游戏</title>
+    <meta charset="utf-8">
+    <title>登录 - 打砖块游戏</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
+            min-height: 100vh;
+            background: linear-gradient(45deg, #0288d1, #03a9f4);
+            font-family: Arial, sans-serif;
         }
-        .login-form {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            width: 300px;
-        }
-        .form-title {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        input {
-            display: block;
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-sizing: border-box;
+            max-width: 400px;
         }
-        button {
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #0288d1;
+            margin: 0;
+            font-size: 2em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
             width: 100%;
             padding: 12px;
-            background: #007bff;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            border-color: #0288d1;
+            outline: none;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: #0288d1;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            margin-top: 10px;
+            transition: background-color 0.3s ease;
         }
-        button:hover {
-            background: #0056b3;
+
+        .submit-btn:hover {
+            background: #026aa7;
         }
-        .register-link {
+
+        .links {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 20px;
         }
-        .register-link a {
-            color: #007bff;
+
+        .links a {
+            color: #0288d1;
             text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
         }
-        .register-link a:hover {
-            text-decoration: underline;
+
+        .links a:hover {
+            color: #026aa7;
         }
-        .flash-messages {
-            color: red;
-            margin-bottom: 10px;
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* 添加动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* 添加输入框焦点效果 */
+        .form-group {
+            position: relative;
+        }
+
+        .form-group::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: #0288d1;
+            transition: width 0.3s ease, left 0.3s ease;
+        }
+
+        .form-group:focus-within::after {
+            width: 100%;
+            left: 0;
         }
     </style>
 </head>
 <body>
-    <div class="login-form">
-        <h2 class="form-title">登录</h2>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash-messages">
-                    {{ messages[0] }}
-                </div>
-            {% endif %}
-        {% endwith %}
+    <div class="container">
+        <div class="header">
+            <h1>欢迎回来</h1>
+        </div>
+        
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+
         <form method="POST">
-            <input type="text" name="username" placeholder="用户名" required>
-            <input type="password" name="password" placeholder="密码" required>
-            <button type="submit">登录</button>
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="submit-btn">登录</button>
         </form>
-        <div class="register-link">
-            还没有账号？ <a href="{{ url_for('register') }}">立即注册</a>
+
+        <div class="links">
+            <a href="{{ url_for('register') }}">还没有账号？立即注册</a>
         </div>
     </div>
 </body>
