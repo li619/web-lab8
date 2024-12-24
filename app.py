@@ -1,13 +1,18 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask import Flask, render_template, jsonify, request
+from flask_login import LoginManager, UserMixin, login_user, login_required, current_user, logout_user
+from flask_sqlalchemy import SQLAlchemy
+import os
+from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Score
 from config import Config
 
 app = Flask(__name__)
-app.config.from_object(Config)
+app.config['SECRET_KEY'] = 'your-secret-key'  # 可以改成任何随机字符串
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///game.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db.init_app(app)
+db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -17,9 +22,8 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 @app.route('/')
-def index():
-    if not current_user.is_authenticated:
-        return redirect(url_for('login'))
+@login_required
+def game():
     return render_template('game.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -88,4 +92,4 @@ def get_scores():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True) 
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000))) 
