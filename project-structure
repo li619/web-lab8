@@ -1,0 +1,12 @@
+breakout-game/
+  ├── index.html
+  ├── css/
+  │   └── style.css
+  ├── js/
+  │   ├── game.js
+  │   └── scenes/
+  │       ├── GameScene.js
+  │       ├── MenuScene.js
+  │       └── GameOverScene.js
+  └── static/
+      └── penzhuang.mp3
